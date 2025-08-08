@@ -1,0 +1,58 @@
+SELECT 
+    "Fiscal Year",
+    LAST_DAY(ics."Date") AS "Post Month",
+--    ics."Date" AS "Post Date",
+    ics."Subsidiary (no hierarchy)" AS "Entity",
+    CASE
+        WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) = 'cost of sales' THEN 'Cost of Sales'
+        WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) IN (
+            'general & administrative expense',
+            'marketing expense',
+            'sales expense',
+            'research & development expense'
+        ) THEN 'Operating Expenses'
+        WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) LIKE '%revenue%' THEN 'Revenue'
+        ELSE COALESCE(fi."Functional Line", 'Blank')
+    END AS "1-Account Group",
+    COALESCE(fi."Functional Line", 'Blank') AS "2-Account SubGroup",
+    COALESCE(fi."Account Rollup", 'Blank') AS "3-Account Branch",
+    COALESCE(fi."Department", 'Blank') AS "4-Account Department",
+    COALESCE(NULLIF(SPLIT_PART(ics."Department", ' : ', 2), ''), 'N/A') AS "5-Account SubDepartment",
+    COALESCE(NULLIF(SPLIT_PART(ics."Department", ' : ', 3), ''), 'N/A') AS "6-Account Sales Category",
+    fi."Account Name",
+    CAST(fi."Account Number" AS STRING) AS "Account Number",
+    SUM(COALESCE(ics."Amount", 0)) AS "Amount",
+    SUM(COALESCE(bud."amount", 0)) AS "Budget Amount"
+FROM (
+    SELECT 'FY 2024' AS "Fiscal Year", "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+    FROM "income_statement_transactions_2024"
+    UNION ALL
+    SELECT 'FY 2025' AS "Fiscal Year", "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+    FROM "income_statement_transactions_2025"
+    UNION ALL
+    SELECT 'FY 2026' AS "Fiscal Year", "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+    FROM "income_statement_transactions_2026"
+) ics
+LEFT JOIN "functional_income_statement_build" fi
+	ON SPLIT_PART(ics."Account", ' ', 1)::STRING = TRIM(fi."Account Number"::STRING)
+		AND COALESCE(ics."Department (no hierarchy)", '- No Department -') = fi."Department"
+        AND ics."Account Type" = fi."Acct Type"
+LEFT JOIN "fy25_budget" bud 
+    ON SPLIT_PART(ics."Account", ' ', 1)::STRING = CAST(bud."Account Number" AS CHAR)
+    	AND ics."Subsidiary (no hierarchy)" = bud."Subsidiary"
+    	AND COALESCE(fi."Department", 'Blank') = bud."Department"
+    	AND LAST_DAY(ics."Date") = LAST_DAY(CAST(bud."month" AS DATE))
+GROUP BY 
+    "Fiscal Year",
+    "Post Month",
+    "Date",
+    "Entity",
+    "1-Account Group",
+	"2-Account SubGroup",
+    "3-Account Branch",
+    "4-Account Department",
+    "5-Account SubDepartment",
+    "6-Account Sales Category",
+    fi."Account Name",
+    fi."Account Number"
+ORDER BY ics."Date" ASC, fi."Account Number" DESC;
