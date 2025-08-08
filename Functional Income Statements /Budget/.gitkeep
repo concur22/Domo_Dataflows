@@ -1,0 +1,69 @@
+To move the file `fy25_budget` from the `Functional Income Statements` directory to a `Budget` subdirectory within `Functional Income Statements` using only GitHub's web interface, you can follow these steps. Since you're restricted to GitHub's web application, you'll manually create the subdirectory (if it doesn't exist) and move the file by editing its path. Here's how to do it:
+
+### Steps to Move the File Using GitHub's Web Interface
+
+1. **Navigate to the Repository**:
+   - Go to your "Domo_Dataflows" repository on GitHub (e.g., `https://github.com/your-username/Domo_Dataflows`).
+   - Ensure you're on the branch where you want to make changes (e.g., `main`). If needed, switch branches using the branch dropdown menu.
+
+2. **Verify the File Location**:
+   - Click into the `Functional Income Statements` directory by selecting it from the repository's file list.
+   - Confirm that the file `fy25_budget` exists directly in `Functional Income Statements`.
+
+3. **Create the `Budget` Subdirectory (if it doesn't exist)**:
+   - If the `Budget` subdirectory already exists, skip to step 4.
+   - In the `Functional Income Statements` directory, click the "Create new file" button (near the top-right corner).
+   - In the file name field, enter `Budget/.gitkeep` to create the `Budget` subdirectory. (`.gitkeep` is a convention to ensure empty directories are tracked by Git, as Git doesn't track empty directories.)
+   - Leave the file content empty or add a placeholder comment (e.g., `# Placeholder to track Budget directory`).
+   - Scroll to the bottom, enter a commit message (e.g., "Create Budget subdirectory"), and click "Commit new file" to the desired branch (e.g., `main`).
+
+4. **Move the `fy25_budget` File**:
+   - Navigate back to the `Functional Income Statements` directory.
+   - Click on the `fy25_budget` file to view it.
+   - Click the pencil icon ("Edit this file") in the top-right corner.
+   - In the file name field at the top, change the path from `Functional Income Statements/fy25_budget` to `Functional Income Statements/Budget/fy25_budget`. This effectively moves the file to the `Budget` subdirectory.
+   - You don't need to change the file content unless desired.
+   - Scroll to the bottom, enter a commit message (e.g., "Move fy25_budget to Budget subdirectory"), and click "Commit changes" to save directly to the branch or create a pull request if you prefer.
+
+5. **Verify the Move**:
+   - Navigate to the `Functional Income Statements/Budget` directory in the repository.
+   - Confirm that `fy25_budget` is now listed in the `Budget` subdirectory.
+   - Check that `fy25_budget` is no longer in the root of `Functional Income Statements`.
+
+6. **Update README.md (Optional)**:
+   - If your README.md includes a directory structure (as discussed previously), you may need to update it to reflect the new file location.
+   - Navigate to `README.md` in the repository root.
+   - Click the pencil icon to edit.
+   - Update the relevant section to reflect the new path (e.g., change `[fy25_budget](Functional Income Statements/fy25_budget)` to `[fy25_budget](Functional Income Statements/Budget/fy25_budget)`).
+   - Commit the changes with a message like "Update README with new file location".
+
+### Notes
+- **Permissions**: Ensure you have write access to the repository to make these changes.
+- **Branch Protection**: If the branch is protected, GitHub will prompt you to create a pull request instead of committing directly. Follow the prompts to create and merge the pull request.
+- **Automation**: If you previously set up a GitHub Actions workflow to auto-update the README.md with the directory structure (as described in earlier responses), it will automatically reflect the new file location on the next run (e.g., on push or schedule).
+- **File Name Sensitivity**: GitHub's file system is case-sensitive. Ensure the directory and file names match exactly (e.g., `Functional Income Statements` vs. `functional income statements`).
+- **Limitations**: GitHub's web interface doesn't support bulk file moves or direct directory manipulation beyond creating files with paths. For complex moves, consider using a local Git client, but the above steps work for a single file move.
+
+### Example Directory Structure Before and After
+**Before**:
+```
+Functional Income Statements/
+├── fy25_budget
+├── IncomeStatement2023.csv
+├── IncomeStatement2024.csv
+├── Analysis/
+├── Reports/
+```
+
+**After**:
+```
+Functional Income Statements/
+├── IncomeStatement2023.csv
+├── IncomeStatement2024.csv
+├── Analysis/
+├── Budget/
+│   ├── fy25_budget
+├── Reports/
+```
+
+This process ensures the `fy25_budget` file is moved to `Functional Income Statements/Budget/` using only GitHub's web interface, without requiring local tools or command-line access. If you encounter issues or need further assistance, let me know!
