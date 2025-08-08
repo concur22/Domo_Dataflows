@@ -37,39 +37,3 @@
           * 1 - Cross Join with Functional Mapping (using new template logic)
           * 2 - Join actual amounts
           * 3 - Join budget amounts
-
-name: Update README with Directory Tree
-
-on: [push]
-
-jobs:
-  update-readme:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Install tree
-        run: sudo apt-get update && sudo apt-get install -y tree
-
-      - name: Generate directory tree
-        run: tree -L 2 > tree.txt
-
-      - name: Update README.md
-        run: |
-          # Remove old tree if it exists
-          awk '/^## Project Structure$/ {exit} {print}' README.md > README.tmp
-          mv README.tmp README.md
-          # Append new tree
-          echo -e "\n## Project Structure\n" >> README.md
-          cat tree.txt >> README.md
-
-      - name: Commit and push changes
-        run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
-          git add README.md
-          git commit -m "Update README with directory tree [automated]"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
