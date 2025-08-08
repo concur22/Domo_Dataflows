@@ -1,0 +1,179 @@
+SELECT
+    "Fiscal Year",
+    "Fiscal Year Start Month",
+    "Fiscal Year End Month",
+    "Post Month",
+    "Entity",
+    "1-Account Group",
+    "2-Account SubGroup",
+    "3-Account Branch",
+    "4-Account Department",
+    "5-Account SubDepartment",
+    "6-Account Sales Category",
+    "Account Name",
+    "Account Number",
+    COALESCE("Amount", 0) AS "Amount",
+    LAG(COALESCE("Amount", 0), 1) OVER (
+        PARTITION BY "Entity", "1-Account Group", "4-Account Department", "Account Number"
+        ORDER BY "Post Month"
+    ) AS "Prior Month Amount",
+    AVG(COALESCE("Amount", 0)) OVER (
+        PARTITION BY "Entity", "1-Account Group", "4-Account Department", "Account Number"
+        ORDER BY "Post Month"
+        ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING
+    ) AS "Trailing 3-Month Avg Amount",
+    LAG(COALESCE("Amount", 0), 12) OVER (
+        PARTITION BY "Entity", "1-Account Group", "4-Account Department", "Account Number"
+        ORDER BY "Post Month"
+    ) AS "Prior Year Amount"
+FROM (
+    SELECT
+        d."Post Month",
+        CASE WHEN MONTH(d."Post Month") >= 7 THEN YEAR(d."Post Month") + 1 ELSE YEAR(d."Post Month") END AS "Fiscal Year",
+        LAST_DAY(TO_DATE((CASE WHEN MONTH(d."Post Month") >= 7 THEN YEAR(d."Post Month") + 1 ELSE YEAR(d."Post Month") END - 1)::VARCHAR || '-07-01', 'YYYY-MM-DD')) AS "Fiscal Year Start Month",
+        LAST_DAY(TO_DATE((CASE WHEN MONTH(d."Post Month") >= 7 THEN YEAR(d."Post Month") + 1 ELSE YEAR(d."Post Month") END)::VARCHAR || '-06-01', 'YYYY-MM-DD')) AS "Fiscal Year End Month",
+        a."Entity",
+        a."1-Account Group",
+        a."2-Account SubGroup",
+        a."3-Account Branch",
+        a."4-Account Department",
+        a."5-Account SubDepartment",
+        a."6-Account Sales Category",
+        a."Account Name",
+        a."Account Number",
+        agg."Monthly Signed Amount" AS "Amount"
+    FROM (
+        SELECT DISTINCT
+            "Entity",
+            "1-Account Group",
+            "2-Account SubGroup",
+            "3-Account Branch",
+            "4-Account Department",
+            "5-Account SubDepartment",
+            "6-Account Sales Category",
+            "Account Name",
+            "Account Number"
+        FROM (
+            SELECT
+                ics."Subsidiary (no hierarchy)" AS "Entity",
+                CASE
+                    WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) = 'cost of sales' THEN 'Cost of Sales'
+                    WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) IN (
+                        'general & administrative expense',
+                        'marketing expense',
+                        'sales expense',
+                        'research & development expense'
+                    ) THEN 'Operating Expenses'
+                    WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) LIKE '%revenue%' THEN 'Revenue'
+                    ELSE COALESCE(fi."Functional Line", 'Blank')
+                END AS "1-Account Group",
+                COALESCE(fi."Functional Line", 'Blank') AS "2-Account SubGroup",
+                COALESCE(fi."Account Rollup", 'Blank') AS "3-Account Branch",
+                COALESCE(fi."Department", 'Blank') AS "4-Account Department",
+                COALESCE(NULLIF(SPLIT_PART(ics."Department", ' : ', 2), ''), 'N/A') AS "5-Account SubDepartment",
+                COALESCE(NULLIF(SPLIT_PART(ics."Department", ' : ', 3), ''), 'N/A') AS "6-Account Sales Category",
+                fi."Account Name",
+                CAST(fi."Account Number" AS STRING) AS "Account Number"
+            FROM (
+                SELECT "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+                FROM "income_statement_transactions_2024"
+                UNION ALL
+                SELECT "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+                FROM "income_statement_transactions_2025"
+                UNION ALL
+                SELECT "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+                FROM "income_statement_transactions_2026"
+            ) ics
+            LEFT JOIN "functional_income_statement_build" fi
+                ON SPLIT_PART(ics."Account", ' ', 1)::STRING = TRIM(fi."Account Number"::STRING)
+                AND COALESCE(ics."Department (no hierarchy)", '- No Department -') = fi."Department"
+                AND CAST(ics."Account Type" AS STRING) = CAST(fi."Acct Type" AS STRING)
+            WHERE LAST_DAY(ics."Date") < LAST_DAY(CURRENT_DATE)
+        ) sub
+    ) a
+    CROSS JOIN (
+        SELECT DISTINCT LAST_DAY("dt") AS "Post Month"
+        FROM "date_dimension_us"
+    ) d
+    LEFT JOIN (
+        SELECT
+            CASE
+                WHEN "Post Month" > "Fiscal Year End Month" THEN "Fiscal Year End Month"
+                WHEN "Post Month" < "Fiscal Year Start Month" THEN "Fiscal Year Start Month"
+                ELSE "Post Month"
+            END AS "Post Month",
+            "Entity",
+            "1-Account Group",
+            "2-Account SubGroup",
+            "3-Account Branch",
+            "4-Account Department",
+            "5-Account SubDepartment",
+            "6-Account Sales Category",
+            "Account Name",
+            "Account Number",
+            SUM(CASE
+                WHEN "1-Account Group" = 'Revenue' THEN "Amount"
+                ELSE "Amount" * -1
+            END) AS "Monthly Signed Amount"
+        FROM (
+            SELECT
+                CONCAT('FY', RIGHT(table_name, 4)) AS "Fiscal Year",
+                LAST_DAY(TO_DATE((SUBSTR(CONCAT('FY', RIGHT(table_name, 4)), 3)::INT - 1)::VARCHAR || '-07-01', 'YYYY-MM-DD')) AS "Fiscal Year Start Month",
+                LAST_DAY(TO_DATE(SUBSTR(CONCAT('FY', RIGHT(table_name, 4)), 3) || '-06-01', 'YYYY-MM-DD')) AS "Fiscal Year End Month",
+                LAST_DAY(ics."Date") AS "Post Month",
+                ics."Subsidiary (no hierarchy)" AS "Entity",
+                CASE
+                    WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) = 'cost of sales' THEN 'Cost of Sales'
+                    WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) IN (
+                        'general & administrative expense',
+                        'marketing expense',
+                        'sales expense',
+                        'research & development expense'
+                    ) THEN 'Operating Expenses'
+                    WHEN LOWER(COALESCE(fi."Functional Line", 'Blank')) LIKE '%revenue%' THEN 'Revenue'
+                    ELSE COALESCE(fi."Functional Line", 'Blank')
+                END AS "1-Account Group",
+                COALESCE(fi."Functional Line", 'Blank') AS "2-Account SubGroup",
+                COALESCE(fi."Account Rollup", 'Blank') AS "3-Account Branch",
+                COALESCE(fi."Department", 'Blank') AS "4-Account Department",
+                COALESCE(NULLIF(SPLIT_PART(ics."Department", ' : ', 2), ''), 'N/A') AS "5-Account SubDepartment",
+                COALESCE(NULLIF(SPLIT_PART(ics."Department", ' : ', 3), ''), 'N/A') AS "6-Account Sales Category",
+                fi."Account Name",
+                CAST(fi."Account Number" AS STRING) AS "Account Number",
+                ics."Amount"
+            FROM (
+                SELECT 'income_statement_transactions_2024' AS table_name, "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+                FROM "income_statement_transactions_2024"
+                UNION ALL
+                SELECT 'income_statement_transactions_2025' AS table_name, "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+                FROM "income_statement_transactions_2025"
+                UNION ALL
+                SELECT 'income_statement_transactions_2026' AS table_name, "Date", "Subsidiary (no hierarchy)", "Name", "Department", "Department (no hierarchy)", "Account", "Account Type", "Amount"
+                FROM "income_statement_transactions_2026"
+            ) ics
+            LEFT JOIN "functional_income_statement_build" fi
+                ON SPLIT_PART(ics."Account", ' ', 1)::STRING = TRIM(fi."Account Number"::STRING)
+                AND COALESCE(ics."Department (no hierarchy)", '- No Department -') = fi."Department"
+                AND CAST(ics."Account Type" AS STRING) = CAST(fi."Acct Type" AS STRING)
+        ) sub
+        WHERE "Post Month" < LAST_DAY(CURRENT_DATE)
+            AND (CASE
+                WHEN "Post Month" > "Fiscal Year End Month" THEN "Fiscal Year End Month"
+                WHEN "Post Month" < "Fiscal Year Start Month" THEN "Fiscal Year Start Month"
+                ELSE "Post Month"
+            END) BETWEEN "Fiscal Year Start Month" AND "Fiscal Year End Month"
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    ) agg
+        ON d."Post Month" = agg."Post Month"
+        AND a."Entity" = agg."Entity"
+        AND a."1-Account Group" = agg."1-Account Group"
+        AND a."2-Account SubGroup" = agg."2-Account SubGroup"
+        AND a."3-Account Branch" = agg."3-Account Branch"
+        AND a."4-Account Department" = agg."4-Account Department"
+        AND a."5-Account SubDepartment" = agg."5-Account SubDepartment"
+        AND a."6-Account Sales Category" = agg."6-Account Sales Category"
+        AND a."Account Name" = agg."Account Name"
+        AND a."Account Number" = agg."Account Number"
+    WHERE d."Post Month" BETWEEN '2023-07-31' AND LAST_DAY(DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH))
+) dense
+ORDER BY "Fiscal Year" DESC, "Post Month" DESC, "Account Number" ASC
