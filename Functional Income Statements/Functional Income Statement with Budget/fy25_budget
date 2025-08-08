@@ -1,0 +1,120 @@
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2024-07-01' AS "month",
+    "2024-07-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2024-08-01' AS "month",
+    "2024-08-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2024-09-01' AS "month",
+    "2024-09-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2024-10-01' AS "month",
+    "2024-10-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2024-11-01' AS "month",
+    "2024-11-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2024-12-01' AS "month",
+    "2024-12-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2025-01-01' AS "month",
+    "2025-01-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2025-02-01' AS "month",
+    "2025-02-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2025-03-01' AS "month",
+    "2025-03-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2025-04-01' AS "month",
+    "2025-04-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2025-05-01' AS "month",
+    "2025-05-01" AS "amount"
+FROM "fy_25_budget_filtered"
+UNION ALL
+SELECT 
+	"Account Type",
+    "Account Number",
+    "Account Name",
+    "Subsidiary",
+    "Department",
+    '2025-06-01' AS "month",
+    "2025-06-01" AS "amount"
+FROM "fy_25_budget_filtered"
+ORDER BY "Account Number", "month", "Department"
