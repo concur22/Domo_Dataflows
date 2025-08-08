@@ -1,0 +1,17 @@
+SELECT bud."Month"
+	, bud."Account Type"
+	, fi."Functional Line"
+    , fi."Account Rollup"
+	, bud."Account Number"
+    , bud."Account Name"
+    , bud."Subsidiary"
+    , bud."Department"
+    , bud."Amount"
+FROM "fy25_budget" bud
+LEFT JOIN "functional_income_statement_build" fi 
+	ON bud."Account Type" = fi."Acct Type"
+    	AND bud."Account Number" = fi."Account Number"
+        AND bud."Department" = fi."Department"
+ORDER BY bud."Month", bud."Account Number"
+
+
