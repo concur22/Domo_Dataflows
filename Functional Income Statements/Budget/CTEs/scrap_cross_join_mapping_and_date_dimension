@@ -1,0 +1,17 @@
+SELECT 
+    d."Post Month",
+    f."Acct Type",
+    f."Account Number",
+    f."Account Name",
+    f."Department",
+    f."Functional Line",
+    f."Account Rollup"
+FROM "functional_income_statement_build" f
+CROSS JOIN (
+    SELECT DISTINCT LAST_DAY("dt") AS "Post Month"  -- Removed ::DATE; use CAST if needed
+    FROM "date_dimension_us"
+) d
+WHERE d."Post Month" BETWEEN '2019-01-01' AND LAST_DAY(DATE_SUB(CURRENT_DATE, INTERVAL 1 MONTH)) 
+ORDER BY d."Post Month" DESC
+	, f."Account Number" ASC 
+    , f."Department" ASC
