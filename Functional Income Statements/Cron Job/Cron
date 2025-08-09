@@ -23,6 +23,18 @@ def export_domo_dataset(dataset_id, access_token, filename):
             f.write(chunk)
 
 if __name__ == "__main__":
-    dataset_id = 'eab32099-8f26-4612-86fe-fa3a8b6555be'
+    datasets = [
+        {
+            'id': 'eab32099-8f26-4612-86fe-fa3a8b6555be',
+            'filename': 'functional_income_statement_with_cross_join.csv'
+        },
+        {
+            'id': 'c0acd971-0f3c-4ad0-9b4c-c2c79ba942be',
+            'filename': 'opportunities_with_products.csv'
+        }
+    ]
     access_token = get_access_token()
-    export_domo_dataset(dataset_id, access_token, 'functional_income_statement_with_cross_join.csv')
+    for dataset in datasets:
+        print(f"Ingesting dataset {dataset['id']} to {dataset['filename']}...")
+        export_domo_dataset(dataset['id'], access_token, dataset['filename'])
+        print(f"Finished ingesting {dataset['filename']}")
