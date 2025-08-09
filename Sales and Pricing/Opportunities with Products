@@ -1,0 +1,144 @@
+SELECT 
+    opp."Account ID.Created Date"::DATE AS "Account Created Date",
+    opp."Close Date",
+    opp."Created Date"::DATE AS "Opportunity Created Date",
+    CASE 
+        WHEN EXTRACT(MONTH FROM opp."Close Date") >= 7 
+        THEN EXTRACT(YEAR FROM opp."Close Date") + 1
+        ELSE EXTRACT(YEAR FROM opp."Close Date")
+    END AS "Fiscal Year (Close Date)",
+    opp."Account ID.Initial License Agreement Date" AS "Initial License Agreement Date",
+    opp."Account ID.License Agreement Date Renewal" AS "License Agreement Date Renewal",
+    LAST_DAY(opp."Close Date") AS "Close Date Month",
+    oli."Opportunity Close Date",
+    MAX(ca."Contract End Date") OVER (PARTITION BY ca."Account ID" ORDER BY ca."Contract End Date" DESC) AS "Account Contract End Date",
+    opp."Account ID",
+    opp."Account ID.Listing Service" AS "Listing Service",
+    ca."Closed Type" AS "Account Case Closed Type",
+    ca."Case Type" AS "Account Case Type",
+    opp."Account ID.CP Tier" AS "Account CP Tier",
+    opp."Account ID.CP Partner" AS "Account CP Partner",
+    NULL AS "Acccount Case Cancellation Reason",
+    NULL AS "Account Case Secondary Cancellation Reason",
+    COALESCE(opp."Primary Lost Reason", 'N/A') AS "Primary Lost Reason",
+    COALESCE(opp."Secondary Lost Reason", 'N/A') AS "Secondary Lost Reason",
+    COALESCE(opp."Elaborate on Win/Loss Decision", 'N/A') AS "Elaborate on Win/Loss Decision",
+    NULLIF(ca."Cancellation ARR", 0) / NULLIF(COUNT(ca."Account ID") OVER (PARTITION BY ca."Account ID"), 0) AS "Account Case Cancellation ARR - Amortized",
+    opp."Account ID.STG Acquisition ARR (2024)" AS "Account STG Acquisition ARR (2024)",
+    opp."Account ID.STG Acquisition Status" AS "Account STG Acquisition Status",
+    opp."Account Display Name" AS "Account Name",
+    opp."Account ID.Lead Source" AS "Account Lead Source",
+    opp."Account License Type",
+    opp."Account Number of Beds",
+    opp."Account ID.Beds Range" AS "Account Beds Range",
+    NULLIF(opp."Account Number of Beds", 0) / NULLIF(COUNT(opp."Account Short Name") OVER (PARTITION BY opp."Account Short Name"), 0) AS "Account Number of Beds - Amortized",
+    opp."Account Number of Beds" AS "Account # of Beds - Static",
+    opp."Account ID.Account Owner Text" AS "Account Owner Name",
+    opp."Account Short Name",
+    opp."Account ID.Account Type" AS "Account Type",
+    opp."Age" AS "Opportunity Age",
+    opp."Age > 1 Year" AS "Opportunity Age > 1 Year",
+    opp."Avg. Opportunity Score",
+    opp."Strategic Win Desk",
+    opp."Account ID.Count licensed products" AS "Account # of Licensed Products",
+    COALESCE(opp."CapStar Grade", 'z-No Data') AS "CapStar Grade",
+    opp."Closed",
+    COALESCE(opp."Account ID.Contract Category", 'z-No Data') AS "Contract Category",
+    NULLIF(opp."Current ARR", 0) / NULLIF(COUNT(opp."Opportunity Full ID") OVER (PARTITION BY opp."Opportunity Full ID"), 0) AS "Current ARR - Amortized",
+    CASE 
+        WHEN opp."Order Type" = 'New' 
+            AND COALESCE(opp."Total Revenues", 0) != 0
+            AND oli."Product Family" != 'Service'
+            AND opp."Record Type Name" NOT IN ('Revenues via Partnerships', 'Partnership Opportunity', 'PMC Listing')
+        THEN 'New Logo'
+        WHEN opp."Order Type" NOT IN ('New', 'Cross-Sell - Cloud Migration', 'Cross-Sell - StarRez Conversion', 'Services Only', 'Renewal', 'Downsell - Beds/Modules', 'College Pads') 
+            AND COALESCE(opp."Total Revenues", 0) != 0
+            AND oli."Product Family" != 'Service'
+            AND opp."Record Type Name" NOT IN ('Revenues via Partnerships', 'PMC Listing')
+        THEN 'Upsell/Cross-Sell'
+        WHEN opp."Order Type" = 'Cross-Sell - Cloud Migration'
+            AND COALESCE(opp."Total Revenues", 0) != 0
+            AND oli."Product Family" != 'Service'
+        THEN 'Cloud Migrations (Upsell)'
+        WHEN opp."Order Type" = 'Cross-Sell - StarRez Conversion'
+            AND COALESCE(opp."Total Revenues", 0) != 0
+            AND oli."Product Family" != 'Service'
+        THEN 'M&A'
+        ELSE 'Other'
+    END AS "Go-to-Market Category",
+    COALESCE(opp."Account ID.Current Housing System", 'z-No Data') AS "Current Housing System",
+    opp."Account ID.Customer Type" AS "Customer Type",
+    opp."Account ID.Customer Health Score" AS "Customer Health Score",
+    oli."Deleted",
+    NULLIF(opp."Full Ramp Value", 0) / NULLIF(COUNT(opp."Opportunity Full ID") OVER (PARTITION BY opp."Opportunity Full ID"), 0) AS "Full Ramp Value - Amortized",
+    COALESCE(oli."Group and Family", 'z-No Data') AS "Group and Family",
+    opp."Lead Source" AS "Opportunity Lead Source",
+    oli."Line Item ID",
+    oli."List Price",
+    oli."Opportunity ID",
+    opp."Opportunity Currency",
+    opp."Opportunity Full ID",
+    opp."Name" AS "Opportunity Name",
+    COALESCE(opp."Order Type", 'z-No Data') AS "Order Type",
+    opp."Owner Full Name" AS "Opportunity Owner Name",
+    NULLIF(opp."Quote Number of beds", 0) / NULLIF(COUNT(opp."Opportunity Full ID") OVER (PARTITION BY opp."Opportunity Full ID"), 0) AS "Quote Number of Beds - Amortized",
+    oli."Product Code",
+    COALESCE(oli."Product Family", 'z-No Data') AS "Product Family",
+    oli."Product ID",
+    oli."Product Lead Source",
+    oli."Product Name",
+    COALESCE(oli."Product Section", 'z-No Data') AS "Product Section",
+    oli."Quote Group",
+    oli."Quote Line",
+    oli."Quote Line Discount",
+    opp."Record Type Name",
+    opp."Region",
+    COALESCE(opp."Renewal Play", 'z-No Data') AS "Renewal Play",
+    opp."Renewal Uplift %",
+    opp."Renewal Term (Months)" AS "Opportunity Renewal Term (Months)",
+    oli."Sales Price" AS "Sales Price (converted)",
+    opp."Stage",
+    oli."Subscription License",
+    oli."Subscription Type",
+    opp."Account ID.Shipping Zip/Postal Code" AS "Account Zip Code",
+    opp."Account ID.Shipping City" AS "Account City",
+    opp."Account ID.Shipping State/Province Code" AS "Account State",
+    opp."Account ID.Shipping Country" AS "Account Country",
+    NULLIF(opp."Total Amount", 0) / NULLIF(COUNT(opp."Opportunity Full ID") OVER (PARTITION BY opp."Opportunity Full ID"), 0) AS "Total Amount - Amortized",
+    NULLIF(opp."Account ID.Total ARR Hierarchy", 0) / NULLIF(COUNT(opp."Account Short Name") OVER (PARTITION BY opp."Account Short Name"), 0) AS "Total ARR Hierarchy - Amortized",
+    COALESCE(NULLIF(opp."Total Revenues", 0) / NULLIF(COUNT(opp."Opportunity Full ID") OVER (PARTITION BY opp."Opportunity Full ID"), 0), 0) AS "Total Revenues - Amortized",
+    oli."Total Price",
+    oli."Total Price Net",
+    NULLIF(opp."Total Service Hours", 0) / NULLIF(COUNT(opp."Opportunity Full ID") OVER (PARTITION BY opp."Opportunity Full ID"), 0) AS "Total Service Hours - Amortized",
+    COALESCE(NULLIF(opp."Total Services NET", 0) / NULLIF(COUNT(opp."Opportunity Full ID") OVER (PARTITION BY opp."Opportunity Full ID"), 0), 0) AS "Total Services Revenue - Amortized",
+    ROW_NUMBER() OVER (PARTITION BY opp."Account Short Name" ORDER BY oli."Line Item ID") AS "Account Row Number",
+    COUNT(opp."Opportunity Full ID") OVER (PARTITION BY opp."Opportunity Full ID") AS "Opportunity Row Count",
+    ROW_NUMBER() OVER (PARTITION BY opp."Opportunity ID" ORDER BY oli."Line Item ID") AS "Opportunity Row Number"
+FROM "opportunities" opp
+LEFT JOIN "opportunity_line_item" oli
+    ON oli."Opportunity ID" = opp."Opportunity ID"
+    AND oli."Opportunity Close Date" = opp."Close Date"
+LEFT JOIN (
+    SELECT 
+        "Account ID",
+        "Closed Type",
+        "Contract End Date",
+        "Cancellation ARR",
+        "Case Type",
+        ROW_NUMBER() OVER (PARTITION BY "Account ID" ORDER BY "Case Number" DESC) AS rn
+    FROM "cases"
+    WHERE SPLIT_PART("Closed Type", ' - ', 1) = 'Closed'
+        AND "Closed Type" != 'Closed - Retained'
+) ca
+    ON opp."Account ID" = ca."Account ID"
+    AND ca.rn = 1
+WHERE opp."Account ID.Test Account" = 'false'
+    AND CASE 
+        WHEN opp."Record Type Name" = 'Renewal'
+            AND COALESCE(opp."Total Amount", 0) < COALESCE(opp."Current ARR", 0)
+        THEN 0
+        ELSE 1
+    END = 1
+    AND oli."Product Name" NOT LIKE '%GradGuard%'
+    AND oli."Product Name" NOT LIKE '%Grad Guard%'
+ORDER BY opp."Close Date" DESC, opp."Opportunity Full ID" ASC;
