@@ -1,0 +1,23 @@
+import pandas as pd
+import sqlite3
+
+# Load CSV into DataFrame
+df = pd.read_csv('functional_income_statement_with_cross_join.csv')
+
+# Display first few rows to verify
+print("First five rows from CSV:")
+print(df.head())
+
+# Connect to (or create) SQLite database file
+conn = sqlite3.connect('test_data.db')
+
+# Write DataFrame to a new table named 'income_statement'
+df.to_sql('income_statement', conn, if_exists='replace', index=False)
+
+# Query the table to verify the load
+query_result = pd.read_sql('SELECT * FROM income_statement LIMIT 5', conn)
+print("\nFirst five rows from SQLite table:")
+print(query_result)
+
+# Close connection when done
+conn.close()

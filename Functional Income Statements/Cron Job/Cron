@@ -1,0 +1,28 @@
+import requests
+
+# Domo API authentication (use your client_id and client_secret)
+DOMO_CLIENT_ID = 'cfeaf676-2737-422a-a1e1-6cb39e8b0fac'
+DOMO_CLIENT_SECRET = 'fe8c7f3ef8a6a5ff482877b22e9f0a18076e6dee39d223b5092f73a86eca72fc'
+
+def get_access_token():
+    url = 'https://api.domo.com/oauth/token'
+    data = {'grant_type': 'client_credentials', 'scope': 'data'}
+    response = requests.post(url, data=data, auth=(DOMO_CLIENT_ID, DOMO_CLIENT_SECRET))
+    if response.status_code != 200:
+        raise Exception(f"Failed to get access token: {response.text}")
+    return response.json()['access_token']
+
+def export_domo_dataset(dataset_id, access_token, filename):
+    url = f'https://api.domo.com/v1/datasets/{dataset_id}/data'
+    headers = {'Authorization': f'Bearer {access_token}'}
+    response = requests.get(url, headers=headers, stream=True)
+    if response.status_code != 200:
+        raise Exception(f"Failed to export dataset: {response.text}")
+    with open(filename, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+
+if __name__ == "__main__":
+    dataset_id = 'eab32099-8f26-4612-86fe-fa3a8b6555be'
+    access_token = get_access_token()
+    export_domo_dataset(dataset_id, access_token, 'functional_income_statement_with_cross_join.csv')
