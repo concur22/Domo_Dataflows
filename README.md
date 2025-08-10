@@ -1,3 +1,8 @@
+![Starvision Monthly Newsletter Banner](images/starvision-banner.png)
+
+
+
+
 # Centralized Data Model
 
 
@@ -14,6 +19,15 @@ This repository supports financial planning and analysis holistically, including
 - Aged Accounts Receivables
 
 ---
+
+/
+├── data/           # Raw or sample data files
+├── src/            # Source code (scripts, notebooks, functions)
+├── docs/           # Documentation, guides, and tutorials
+├── tests/          # Automated tests
+├── README.md       # This file
+└── ...             # Other relevant files/folders
+
 
 # Domo Admin Tasks & Projects
 
