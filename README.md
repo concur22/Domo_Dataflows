@@ -1,12 +1,19 @@
-![Starvision Monthly Newsletter Banner](Images/StarRez Banner.png)
-
-
-
+![Starvision Monthly Newsletter Banner](Images/StarRez%20Banner.png)
 
 # Centralized Data Model
 
-
 ## Overview
+
+This repository supports financial planning and analysis holistically, including datasets specific but not limited to: 
+
+- Sales performance relative to:
+    - Opportunity
+    - Product
+    - Customer
+- Revenue Operations
+- Income Statement Transactions
+- Aged Accounts Receivables
+
 
 This repository supports financial planning and analysis holistically, including datasets specific but not limited to: 
 
