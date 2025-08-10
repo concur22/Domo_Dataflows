@@ -1,4 +1,4 @@
-![Starvision Monthly Newsletter Banner](images/starvision-banner.png)
+![Starvision Monthly Newsletter Banner](Images/StarRez Banner.png)
 
 
 
