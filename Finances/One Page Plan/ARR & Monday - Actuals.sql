@@ -214,6 +214,6 @@ SELECT
     DATE_SUB(`Month`, INTERVAL DAYOFMONTH(`Month`) - 1 DAY) AS `Month`, 
     `Metric`, 
     `Actual` AS `Actual Value` 
-FROM `Monday`
+FROM `Monday Actuals`
 
 ORDER BY 3 DESC
