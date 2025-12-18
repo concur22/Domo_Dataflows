@@ -1,0 +1,35 @@
+SELECT DISTINCT MD5(UserName) AS UserKey
+ , UserName
+ , ROLE
+ , UserRegion
+FROM (
+ SELECT `Work Item Manager Name` AS UserName
+  , 'Manager' AS ROLE
+  , `User Region` AS UserRegion
+ FROM `stg_timesheet`
+ WHERE `Work Item Manager Name` <> 'z - No Data'
+ 
+ UNION
+ 
+ SELECT `Reported BY Name`
+  , 'ReportedBy'
+  , `User Region`
+ FROM `stg_timesheet`
+ WHERE `Reported BY Name` <> 'z - No Data'
+ 
+ UNION
+ 
+ SELECT `Created BY Name`
+  , 'CreatedBy'
+  , `User Region`
+ FROM `stg_timesheet`
+ WHERE `Created BY Name` <> 'z - No Data'
+ 
+ UNION
+ 
+ SELECT `Approved BY Name`
+  , 'ApprovedBy'
+  , `User Region`
+ FROM `stg_timesheet`
+ WHERE `Approved BY Name` <> 'z - No Data'
+ ) u
