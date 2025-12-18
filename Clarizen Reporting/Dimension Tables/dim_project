@@ -1,0 +1,15 @@
+SELECT DISTINCT
+  MD5(`Project ID`) AS ProjectKey,
+  `Project ID`       AS ProjectID,
+  `Project Created On Date`,
+  `Project Start Date`,
+  `Project Due Date`,
+  `Project Name`,
+  `Project Type`,
+  `Project Size`,
+  `Project State`,
+  `Parent Project Name`,
+  `Project Manager Name`,
+  `Project Track Status`,
+  `SYSID`
+FROM `stg_timesheet`
