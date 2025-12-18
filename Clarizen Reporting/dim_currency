@@ -1,0 +1,8 @@
+SELECT DISTINCT
+  MD5(CurrencySymbol) AS CurrencyKey,
+  CurrencySymbol
+FROM (
+  SELECT `C_HourlyRate_currency`       AS CurrencySymbol FROM `stg_timesheet`
+  UNION
+  SELECT `Total Services NET Currency` AS CurrencySymbol FROM `stg_timesheet`
+) cu
