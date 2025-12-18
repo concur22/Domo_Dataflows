@@ -1,0 +1,230 @@
+/* ============================
+   One-row helper keys (dedupe)
+   ============================ */
+WITH
+cl_key AS (              /* one Customer Link per Project */
+  SELECT `Entity_id`, MAX(`id`) AS max_id
+  FROM `Customer Link`
+  GROUP BY `Entity_id`
+),
+ge_key AS (              /* one Generic Project row per Project */
+  SELECT `Project_id`, MAX(`id`) AS max_id
+  FROM `Generic Project`
+  GROUP BY `Project_id`
+),
+/* FX: one row per currency */
+cct_one AS (
+  SELECT `Currency Symbol`, MAX(`Conversion Rate`) AS `Conversion Rate`
+  FROM `Currency Conversion Rates`
+  GROUP BY `Currency Symbol`
+),
+ccw_one AS (
+  SELECT `Currency Symbol`, MAX(`Conversion Rate`) AS `Conversion Rate`
+  FROM `Currency Conversion Rates`
+  GROUP BY `Currency Symbol`
+),
+ccp_one AS (
+  SELECT `Currency Symbol`, MAX(`Conversion Rate`) AS `Conversion Rate`
+  FROM `Currency Conversion Rates`
+  GROUP BY `Currency Symbol`
+),
+chr_one AS (  /* Hourly rate FX */
+  SELECT `Currency Symbol`, MAX(`Conversion Rate`) AS `Conversion Rate`
+  FROM `Currency Conversion Rates`
+  GROUP BY `Currency Symbol`
+),
+
+/* Build row-grain and remove any residual fan-out (rn=1) */
+build_rows AS (
+  SELECT
+      COALESCE(pr.`Name`, 'z - No Data') AS `Project Name`,
+      COALESCE(REPLACE(pr.`ProjectType_id`, '/ProjectType/', ''), 'z - No Data') AS `Project Type`,
+      COALESCE(REPLACE(pr.`ProjectSize_id`, '/ProjectSize/', ''), 'z - No Data') AS `Project Size`,
+      COALESCE(pp.`Name`, 'z - No Data') AS `Parent Project Name`,
+
+      COALESCE(wo.`Name`, 'z - No Data') AS `Work Item Name`,
+
+      /* Implementation Type: task → project work-item fallback */
+      COALESCE(
+        REPLACE(wo.`C_ConversionType_id`,  '/C_WorkItemConversionType/', ''),
+        REPLACE(pwo.`C_ConversionType_id`, '/C_WorkItemConversionType/', ''),
+        'z - No Data'
+      ) AS `Implementation Type`,
+
+      COALESCE(REPLACE(wo.`Phase_id`, '/Phase/', ''), 'z - No Data') AS `Work Item Phase`,
+      COALESCE(REPLACE(wo.`TrackStatus_id`, '/TrackStatus/', ''), 'z - No Data') AS `Work Item Track Status`,
+      COALESCE(wo.`Billable`, 'z - No Data') AS `Billable`,
+
+      COALESCE(rb.`DisplayName`, 'z - No Data') AS `Reported By Name`,
+      COALESCE(woman.`DisplayName`, 'z - No Data') AS `Work Item Manager Name`,
+      COALESCE(prman.`DisplayName`, 'z - No Data') AS `Project Manager Name`,
+      COALESCE(cb.`DisplayName`, 'z - No Data') AS `Created By Name`,
+      ts.`CreatedOn` AS `Created On Timestamp`,
+      COALESCE(ab.`DisplayName`, 'z - No Data') AS `Approved By Name`,
+
+      COALESCE(cus.`Name`, 'z - No Data') AS `Customer Name`,
+      cus.`C_G` AS `StarRez Go Live Date`,
+      COALESCE(REPLACE(cus.`State_id`, '/State/', ''), 'z - No Data') AS `Customer State`,
+      COALESCE(own.`DisplayName`, 'z - No Data') AS `Customer Owner Name`,
+      COALESCE(REPLACE(cus.`AccountStatus_id`, '/AccountStatus/', ''), 'z - No Data') AS `Customer Account Status`,
+      COALESCE(REPLACE(cus.`Tier_id`, '/Tier/', ''), 'z - No Data') AS `Customer Tier`,
+      COALESCE(REPLACE(cus.`Region_id`, '/Region/', ''), 'z - No Data') AS `Customer Region`,
+
+      COALESCE(REPLACE(pr.`State_id`, '/State/', ''), 'z - No Data') AS `Project State`,
+      COALESCE(REPLACE(cb.`Region_id`, '/Region/', ''), 'z-No Data') AS `User Region`,
+
+      ts.`Duration_unit`  AS `Duration Unit`,
+      ts.`Duration_value` AS `Duration Value`,
+      ts.`RegularHours`   AS `Regular Hours`,
+      ts.`Comment`,
+
+      /* FX-applied values at row grain */
+      (ts.`BillingRate_value` * cct.`Conversion Rate`) AS `Billing Rate Value`,
+      (ts.`Cost_value`       * cct.`Conversion Rate`) AS `Cost Value`,
+      (wo.`ActualCost_value` * ccw.`Conversion Rate`) AS `Actual Cost Value`,
+      (ts.`Price_value`      * cct.`Conversion Rate`) AS `Price Value`,
+      ts.`Charged`,
+
+      /* Project-level totals carried for later amortization */
+      pr.`C_TotalRemainingServicesHoursCalculated` AS `PRJ_TotalRemainingHrs`,
+      (pr.`C_TotalServicesNET_value` * ccp.`Conversion Rate`) AS `PRJ_TotalServicesNET`,
+      pr.`C_TotalServicesNET_currency` AS `Total Services NET Currency`,
+      (pr.`C_HourlyRate_value` * chr.`Conversion Rate`) AS `PRJ_HourlyRate`,
+      pr.`C_HourlyRate_currency` AS `C_HourlyRate_currency`,
+
+      COALESCE(REPLACE(wo.`C_UtilizationCategory_id`, '/C_WorkItemUtilizationCategory/', ''), 'z - No Data') AS `Utilization Category`,
+      COALESCE(REPLACE(wo.`ResourceUtilizationCategory_id`, '/ResourceUtilizationCategory/', ''), 'z - No Data') AS `Resource Utilization Category`,
+
+      pr.`SYSID`,
+      cus.`id` AS `Customer ID`,
+      cl.`Entity_id` AS `Customer Link Entity ID`,
+      pr.`Project_id` AS `Project ID`,
+      wo.`id` AS `Work Item ID`,
+      ts.`id` AS `Timesheet ID`,
+      ts.`ExternalID` AS `Timesheet External ID`,
+
+      ROW_NUMBER() OVER (
+        PARTITION BY ts.`id`, wo.`id`
+        ORDER BY (cus.`C_G` IS NOT NULL) DESC,
+                 pr.`Project_id` DESC
+      ) AS rn
+  FROM `Timesheet` ts
+  LEFT JOIN `Work Item` wo
+    ON ts.`WorkItem_id` = wo.`id`
+
+  /* Prefer Work Item’s project; fall back to Timesheet.Project_id */
+  LEFT JOIN `Project` pr
+    ON COALESCE(wo.`Project_id`, ts.`Project_id`) = pr.`Project_id`
+  LEFT JOIN `Project` pp
+    ON pr.`ParentProject_id` = pp.`Project_id`
+
+  /* Project-level Work Item for fallback fields */
+  LEFT JOIN `Work Item` pwo
+    ON pr.`Project_id` = pwo.`id`
+
+  /* Users */
+  LEFT JOIN `User` woman ON wo.`Manager_id`    = woman.`id`
+  LEFT JOIN `User` prman ON wo.`Manager_id`    = prman.`id`
+  LEFT JOIN `User` cb  ON ts.`CreatedBy_id`  = cb.`id`
+  LEFT JOIN `User` ab  ON ts.`ApprovedBy_id` = ab.`id`
+  LEFT JOIN `User` rb  ON ts.`ReportedBy_id` = rb.`id`
+
+  /* Generic Project (deduped) */
+  LEFT JOIN ge_key ON pr.`Project_id` = ge_key.`Project_id`
+  LEFT JOIN `Generic Project` ge ON ge.`id` = ge_key.`max_id`
+
+  /* Customer linkage (deduped) */
+  LEFT JOIN cl_key ON pr.`Project_id` = cl_key.`Entity_id`
+  LEFT JOIN `Customer Link` cl ON cl.`id` = cl_key.`max_id`
+  LEFT JOIN `Customer` cus ON cl.`Customer_id` = cus.`id`
+  LEFT JOIN `User` own ON cus.`Owner_id` = own.`id`
+
+  /* Currency Conversion Rates */
+  LEFT JOIN cct_one cct ON ts.`BillingRate_currency`         = cct.`Currency Symbol`
+  LEFT JOIN ccw_one ccw ON wo.`ActualCost_currency`          = ccw.`Currency Symbol`
+  LEFT JOIN ccp_one ccp ON pr.`C_TotalServicesNET_currency`  = ccp.`Currency Symbol`
+  LEFT JOIN chr_one chr ON pr.`C_HourlyRate_currency`        = chr.`Currency Symbol`
+),
+
+rows_dedup AS (
+  SELECT *
+  FROM build_rows
+  WHERE rn = 1
+),
+
+/* Count row-level records per project (after de-dup) */
+proj_row_counts AS (
+  SELECT `Project ID`, COUNT(*) AS `project_row_count`
+  FROM rows_dedup
+  GROUP BY `Project ID`
+)
+
+SELECT
+    r.`Project Manager Name`,
+    r.`Project Name`,
+    r.`Project Type`,
+    r.`Project Size`,
+    r.`Parent Project Name`,
+    r.`Work Item Name`,
+    r.`Implementation Type`,
+    r.`Work Item Phase`,
+    r.`Work Item Track Status`,
+    r.`Billable`,
+    r.`Reported By Name`,
+    r.`Work Item Manager Name`,
+    r.`Created By Name`,
+    r.`Created On Timestamp`,
+    r.`Approved By Name`,
+    r.`Customer Name`,
+    r.`StarRez Go Live Date`,
+    r.`Customer State`,
+    r.`Customer Owner Name`,
+    r.`Customer Account Status`,
+    r.`Customer Tier`,
+    r.`Customer Region`,
+    r.`Project State`,
+    r.`User Region`,
+    r.`Duration Unit`,
+    r.`Duration Value`,
+    r.`Regular Hours`,
+    r.`Comment`,
+    r.`Billing Rate Value`,
+    r.`Cost Value`,
+    r.`Actual Cost Value`,
+    r.`Price Value`,
+    r.`Charged`,
+
+    /* ===== Amortized measures (additive) ===== */
+    CASE
+      WHEN prc.`project_row_count` > 0 AND r.`PRJ_TotalRemainingHrs` IS NOT NULL
+        THEN r.`PRJ_TotalRemainingHrs` / prc.`project_row_count`
+      ELSE NULL
+    END AS `Project Total Remaining Services Hours - Amortized`,
+
+    CASE
+      WHEN prc.`project_row_count` > 0 AND r.`PRJ_TotalServicesNET` IS NOT NULL
+        THEN r.`PRJ_TotalServicesNET` / prc.`project_row_count`
+      ELSE NULL
+    END AS `Project Total Revenue - Amortized`,
+
+    CASE
+      WHEN prc.`project_row_count` > 0 AND r.`PRJ_HourlyRate` IS NOT NULL
+        THEN r.`PRJ_HourlyRate` / prc.`project_row_count`
+      ELSE NULL
+    END AS `Project Hourly Rate - Amortized`,
+
+    r.`C_HourlyRate_currency` AS `C_HourlyRate_currency`,
+    r.`Total Services NET Currency`,
+    r.`Utilization Category`,
+    r.`Resource Utilization Category`,
+    r.`SYSID`,
+    r.`Customer ID`,
+    r.`Customer Link Entity ID`,
+    r.`Project ID`,
+    r.`Work Item ID`,
+    r.`Timesheet ID`,
+    r.`Timesheet External ID`
+FROM rows_dedup r
+JOIN proj_row_counts prc
+  ON prc.`Project ID` = r.`Project ID`
+ORDER BY r.`Project Name`, r.`Work Item Name`, r.`Timesheet ID`;
