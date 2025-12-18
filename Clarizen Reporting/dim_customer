@@ -1,0 +1,12 @@
+SELECT DISTINCT
+  MD5(`Customer ID`) AS CustomerKey,
+  `Customer ID`       AS CustomerID,
+  `Customer Name`,
+  `Customer State`,
+  `Customer Owner Name`,
+  `Customer Account Status`,
+  `Customer Tier`,
+  `Customer Region`,
+  `StarRez Go Live Date`,
+  `Customer Link Entity ID`
+FROM `stg_timesheet`
