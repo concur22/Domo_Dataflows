@@ -1,0 +1,7 @@
+SELECT DISTINCT
+  MD5(`Work Item ID`) AS `WorkItemKey`,
+  `Work Item ID` AS `WorkItemID`,
+  MD5(`Project ID`) AS `ProjectKey`,
+  `Work Item Created On Date`,
+  `Work Item Actual Cost Value`
+FROM `stg_timesheet`
