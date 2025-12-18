@@ -1,0 +1,31 @@
+WITH project_rollup AS (
+  SELECT
+    `Project ID`,
+    `Customer ID`,
+    `Customer Name`,
+    SUM(`Duration Value`) AS `Total_Hours`,
+    SUM(CASE WHEN (CASE WHEN LOWER(TRIM(`Billable`)) IN ('true','t','yes','y','1') THEN TRUE ELSE FALSE END)
+             THEN `Duration Value` ELSE 0 END) AS `Billable_Hours`,
+    SUM(`Price Value`) AS `Price_Value`,
+    SUM(`Cost Value`)  AS `Cost_Value`,
+    SUM(`Project Total Revenue - Amortized`) AS `Total_Services_NET`,
+    SUM(`Project Total Remaining Services Hours - Amortized`) AS `Total_Rem_Hours`,
+    SUM(CASE WHEN NOT (CASE WHEN LOWER(TRIM(`Charged`)) IN ('true','t','yes','y','1') THEN TRUE ELSE FALSE END)
+             THEN `Price Value` ELSE 0 END) AS `Unbilled_Value`,
+    SUM(`Project Hourly Rate - Amortized`) AS `Project_Hourly_Rate`
+  FROM `stg_timesheet`
+  GROUP BY `Project ID`, `Customer ID`, `Customer Name`
+)
+SELECT
+  `Customer ID`  AS `Customer_ID`,
+  `Customer Name` AS `Customer_Name`,
+  COUNT(*) AS `Projects`,
+  SUM(`Total_Services_NET`) AS `Total_Services_NET`,
+  SUM(`Total_Rem_Hours`) AS `Total_Rem_Hours`,
+  SUM(`Price_Value`) AS `Total_Price_Value`,
+  SUM(`Cost_Value`)  AS `Total_Cost_Value`,
+  SUM(`Total_Hours`) AS `Total_Hours`,
+  SUM(`Billable_Hours`) AS `Billable_Hours`,
+  SUM(`Unbilled_Value`) AS `Unbilled_Value`
+FROM project_rollup
+GROUP BY `Customer ID`, `Customer Name`;
