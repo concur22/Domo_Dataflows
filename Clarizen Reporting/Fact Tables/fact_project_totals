@@ -1,0 +1,11 @@
+SELECT MD5(`Project ID`) AS ProjectKey
+ , `Project ID`
+ , SUM(`Project Total Remaining Services Hours - Amortized`) AS `Project Total Remaining Services Hours`
+ , SUM(`Project Total Revenue - Amortized`) AS `Project Total Revenue`
+ , SUM(`Project Hourly Rate - Amortized`) AS `Project Hourly Rate`
+ , SUM(`Project Total Service Hours - Amortized`) AS `Project Total Service Hours`
+ , MAX(`C_HourlyRate_currency`) AS HourlyRateCurrency
+ , MAX(`Total Services NET Currency`) AS TotalServicesNETCurrency
+ , SUM(`Project Actual Cost Value`) AS `Project Actual Cost Value`
+FROM `stg_timesheet`
+GROUP BY `Project ID`
