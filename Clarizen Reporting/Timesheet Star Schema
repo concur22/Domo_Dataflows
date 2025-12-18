@@ -1,0 +1,173 @@
+SELECT
+  f.`Timesheet ID`,
+  f.`Timesheet External ID`,
+  f.`Created On Timestamp`,
+  f.`Duration Unit`,
+  f.`Duration Value`,
+  f.`Regular Hours`,
+  f.`Billing Rate Value`,
+  f.`Cost Value`,
+--  f.`Work Item Actual Cost Value`,
+  f.`Price Value`,
+  f.`Charged`,
+  f.`Comment`,
+
+  -- Project Dim
+  p.`Project Created On Date`,
+  p.`Project Start Date`,
+  p.`Project Due Date`,
+  p.`Project Name`,
+  p.`Project Type`,
+  p.`Project Size`,
+  p.`Project State`,
+  p.`Parent Project Name`,
+  p.`Project Manager Name`,
+  p.`Project ID`,
+  p.`Project Track Status`,
+
+  -- Project Fact
+  pt.`Project Total Remaining Services Hours`,
+  pt.`Project Total Revenue`,
+  pt.`Project Hourly Rate`,
+  pt.`Project Hourly Rate Currency`,
+  pt.`Project Total Revenue Currency`,
+  pt.`Project Total Service Hours`,
+  pt.`Project Actual Cost Value`,
+
+  -- Work Item Dim
+  w.`Work Item Name`,
+  w.`Implementation Type`,
+  w.`Work Item Phase`,
+  w.`Work Item Track Status`,
+  w.`Utilization Category`,
+  w.`Resource Utilization Category`,
+  w.`Billable`,
+
+  -- Work Item Fact
+  wf.`Work Item Created On Date`,
+  wf.`Work Item Actual Cost Value`,
+
+  -- Customer
+  c.`Customer Name`,
+  c.`Customer State`,
+  c.`Customer Owner Name`,
+  c.`Customer Account Status`,
+  c.`Customer Tier`,
+  c.`Customer Region`,
+  c.`StarRez Go Live Date`,
+
+  -- Users by role (each slice is unique on UserKey)
+  m.UserName AS `Manager Name`,
+  m.UserRegion AS `Manager Region`,
+  rb.UserName AS `Reported By Name`,
+  rb.UserRegion AS `Reported By Region`,
+  cb.UserName AS `Created By Name`,
+  cb.UserRegion AS `Created By Region`,
+  ab.UserName AS `Approved By Name`,
+  ab.UserRegion AS `Approved By Region`,
+
+  -- Currency
+  cu.`CurrencySymbol`
+
+FROM `fact_timesheet` f
+
+LEFT JOIN (
+  SELECT
+    ProjectKey,
+    MAX(`Project Total Remaining Services Hours`) AS `Project Total Remaining Services Hours`,
+    MAX(`Project Total Revenue`)             AS `Project Total Revenue`,
+    MAX(`Project Hourly Rate`)                   AS `Project Hourly Rate`,
+    MAX(`HourlyRateCurrency`)           AS `Project Hourly Rate Currency`,
+    MAX(`TotalServicesNetCurrency`)     AS `Project Total Revenue Currency`,
+    MAX(`Project Total Service Hours`) AS `Project Total Service Hours`,
+    MAX(`Project Actual Cost Value`) AS `Project Actual Cost Value`
+  FROM `fact_project_totals`
+  GROUP BY ProjectKey
+) pt ON f.`ProjectKey` = pt.`ProjectKey`
+
+
+LEFT JOIN (
+  SELECT ProjectKey,
+         MIN(`Project Created On Date`) AS `Project Created On Date`,
+         MIN(`Project Start Date`) AS `Project Start Date`,
+         MIN(`Project Due Date`) AS `Project Due Date`,
+         MIN(`Project Name`)        AS `Project Name`,
+         MIN(`Project Type`)        AS `Project Type`,
+         MIN(`Project Size`)        AS `Project Size`,
+         MIN(`Project State`)       AS `Project State`,
+         MIN(`Parent Project Name`) AS `Parent Project Name`,
+         MIN(`Project Manager Name`) AS `Project Manager Name`,
+         MIN(`ProjectID`) AS `Project ID`,
+         MIN(`Project Track Status`) AS `Project Track Status`
+  FROM `dim_project`
+  GROUP BY ProjectKey
+) p ON f.`ProjectKey` = p.`ProjectKey`
+
+LEFT JOIN (
+  SELECT WorkItemKey,
+         MAX(`Work Item Created On Date`)     AS `Work Item Created On Date`,
+         MAX(`Work Item Actual Cost Value`)   AS `Work Item Actual Cost Value`
+  FROM `fact_work_item`
+  GROUP BY WorkItemKey
+) wf ON f.`WorkItemKey` = wf.`WorkItemKey`
+
+LEFT JOIN (
+  SELECT WorkItemKey,
+         MIN(`Work Item Name`)                AS `Work Item Name`,
+         MIN(`Implementation Type`)           AS `Implementation Type`,
+         MIN(`Work Item Phase`)               AS `Work Item Phase`,
+         MIN(`Work Item Track Status`)        AS `Work Item Track Status`,
+         MIN(`Utilization Category`)          AS `Utilization Category`,
+         MIN(`Resource Utilization Category`) AS `Resource Utilization Category`,
+         MIN(`Billable`) AS `Billable`
+  FROM `dim_work_item`
+  GROUP BY WorkItemKey
+) w ON f.`WorkItemKey` = w.`WorkItemKey`
+
+LEFT JOIN (
+  SELECT CustomerKey,
+         MIN(`Customer Name`)           AS `Customer Name`,
+         MIN(`Customer State`)          AS `Customer State`,
+         MIN(`Customer Owner Name`)     AS `Customer Owner Name`,
+         MIN(`Customer Account Status`) AS `Customer Account Status`,
+         MIN(`Customer Tier`)           AS `Customer Tier`,
+         MIN(`Customer Region`)         AS `Customer Region`,
+         MIN(`StarRez Go Live Date`)    AS `StarRez Go Live Date`
+  FROM `dim_customer`
+  GROUP BY CustomerKey
+) c ON f.`CustomerKey` = c.`CustomerKey`
+
+-- Role-filtered user slices (1 row per UserKey per slice)
+LEFT JOIN (
+  SELECT MD5(UserName) AS UserKey, MIN(UserName) AS UserName, MIN(UserRegion) AS UserRegion
+  FROM `dim_user`
+  WHERE Role='Manager'
+  GROUP BY MD5(UserName)
+) m  ON f.`ManagerKey`     = m.UserKey
+
+LEFT JOIN (
+  SELECT MD5(UserName) AS UserKey, MIN(UserName) AS UserName, MIN(UserRegion) AS UserRegion
+  FROM `dim_user`
+  WHERE Role='ReportedBy'
+  GROUP BY MD5(UserName)
+) rb ON f.`ReportedByKey`  = rb.UserKey
+
+LEFT JOIN (
+  SELECT MD5(UserName) AS UserKey, MIN(UserName) AS UserName, MIN(UserRegion) AS UserRegion
+  FROM `dim_user`
+  WHERE Role='CreatedBy'
+  GROUP BY MD5(UserName)
+) cb ON f.`CreatedByKey`   = cb.UserKey
+
+LEFT JOIN (
+  SELECT MD5(UserName) AS UserKey, MIN(UserName) AS UserName, MIN(UserRegion) AS UserRegion
+  FROM `dim_user`
+  WHERE Role='ApprovedBy'
+  GROUP BY MD5(UserName)
+) ab ON f.`ApprovedByKey`  = ab.UserKey
+
+LEFT JOIN (
+  SELECT CurrencyKey, MIN(CurrencySymbol) AS CurrencySymbol
+  FROM `dim_currency`
+  GROUP BY CurrencyKey
+) cu ON f.`CurrencyKey` = cu.`CurrencyKey`;
