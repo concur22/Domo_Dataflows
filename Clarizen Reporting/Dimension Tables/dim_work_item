@@ -1,0 +1,11 @@
+SELECT DISTINCT
+  MD5(`Work Item ID`) AS `WorkItemKey`,
+  `Work Item ID` AS `WorkItemID`,
+  `Work Item Name`,
+  `Implementation Type`,
+  `Work Item Phase`,
+  `Work Item Track Status`,
+  `Utilization Category`,
+  `Resource Utilization Category`,
+  `Billable`
+FROM `stg_timesheet`
