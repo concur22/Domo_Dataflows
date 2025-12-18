@@ -1,0 +1,24 @@
+SELECT
+  `Project ID`,
+  MIN(`Project Name`) AS `Project_Name`,
+  MIN(`Customer ID`)  AS `Customer_ID`,
+  MIN(`Customer Name`) AS `Customer_Name`,
+  SUM(`Duration Value`) AS `Total_Hours`,
+  SUM(CASE WHEN (CASE WHEN LOWER(TRIM(`Regular Hours`)) IN ('true','t','yes','y','1') THEN TRUE ELSE FALSE END)
+            THEN `Duration Value` ELSE 0 END) AS `Regular_Hours`,  
+  SUM(CASE WHEN (CASE WHEN LOWER(TRIM(`Billable`)) IN ('true','t','yes','y','1') THEN TRUE ELSE FALSE END)
+            THEN `Duration Value` ELSE 0 END) AS `Billable_Hours`,
+  SUM(`Price Value`) AS `Price_Value`,
+  SUM(`Cost Value`)  AS `Cost_Value`,
+  SUM(`Work Item Actual Cost Value`) AS `Work_item_Actual_Cost_Value`,
+  SUM(CASE WHEN `Charged` THEN 0 ELSE `Price Value` END) AS `Unbilled_Value`,
+  SUM(CASE WHEN `Comment` IS NOT NULL AND TRIM(`Comment`) <> '' THEN 1 ELSE 0 END) AS `Comments_Present`,
+  COUNT(*) AS `Rows`,
+  SUM(CASE WHEN `Implementation Type` LIKE '%Internal%' OR `Work Item Name` LIKE '%Admin%' THEN `Duration Value` ELSE 0 END) AS `Admin_Hours`,
+  SUM(CASE WHEN LOWER(`Work Item Phase`) LIKE '%rework%' THEN `Duration Value` ELSE 0 END) AS `Rework_Hours`,
+  SUM(CASE WHEN `Work Item Phase` = 'z - No Data' THEN 1 ELSE 0 END) AS `Unknown_Phase_Rows`,
+  SUM(`Project Total Remaining Services Hours - Amortized`) AS `Total_Rem_Hours`,
+  SUM(`Project Total Revenue - Amortized`) AS `Total_Services_NET`,
+  SUM(`Project Hourly Rate - Amortized`) AS `Project_Hourly_Rate`
+FROM `stg_timesheet`
+GROUP BY `Project ID`
