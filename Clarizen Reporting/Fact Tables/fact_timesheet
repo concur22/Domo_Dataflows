@@ -1,0 +1,22 @@
+SELECT
+  `Timesheet ID`,
+  `Timesheet External ID`,
+  MD5(`Project ID`)       AS ProjectKey,
+  MD5(`Work Item ID`)     AS WorkItemKey,
+  MD5(`Customer ID`)      AS CustomerKey,
+  MD5(`Work Item Manager Name`)     AS ManagerKey,
+  MD5(`Reported By Name`) AS ReportedByKey,
+  MD5(`Created By Name`)  AS CreatedByKey,
+  MD5(`Approved By Name`) AS ApprovedByKey,
+  MD5(COALESCE(`C_HourlyRate_currency`,`Total Services NET Currency`)) AS CurrencyKey,
+  `Created On Timestamp`,
+  `Duration Unit`,
+  `Duration Value`,
+  `Regular Hours`,
+  `Billing Rate Value`,
+  `Cost Value`,
+--  `Work Item Actual Cost Value`,
+  `Price Value`,
+  `Charged`,
+  `Comment`
+FROM `stg_timesheet`
