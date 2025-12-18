@@ -1,0 +1,98 @@
+SELECT
+  -- Project attributes
+  p.`Project Created On Date`,
+  p.`Project Start Date`,
+  p.`Project Due Date`,
+  p.`Project Name`,
+  p.`Project Type`,
+  p.`Project Size`,
+  p.`Project State`,
+  p.`Parent Project Name`,
+  p.`Project Track Status`,
+
+  -- Project totals
+  fpt.`Project ID`,
+  fpt.`Project Total Remaining Services Hours`,
+  fpt.`Project Total Revenue`,
+  fpt.`Project Hourly Rate`,
+  fpt.`Project Total Service Hours`,
+  fpt.`HourlyRateCurrency`,
+  fpt.`TotalServicesNETCurrency`,
+  fpt.`Project Actual Cost Value`,
+
+  -- Customer attributes (single customer per project)
+  c.`Customer Name`,
+  c.`Customer State`,
+  c.`Customer Owner Name`,
+  c.`Customer Account Status`,
+  c.`Customer Tier`,
+  c.`Customer Region`,
+  c.`StarRez Go Live Date`,
+  c.`Customer Link Entity ID`,
+
+  -- Work item measures (aggregated & grouped by project) 
+--  wit.`Work Item Created On Date`,
+  wit.`Work Item Actual Cost Value`,
+  wit.`Work Item Count`
+
+FROM `fact_project_totals` fpt
+
+-- De-duped work item fact
+LEFT JOIN (
+  SELECT 
+    ProjectKey,
+    MIN(`Work Item Created On Date`) AS `Work Item Created On Date`,
+    SUM(`Work Item Actual Cost Value`) AS `Work Item Actual Cost Value`,
+    COUNT(DISTINCT `WorkItemID`) AS `Work Item Count`
+  FROM `fact_work_item`
+  GROUP BY ProjectKey
+) wit
+  ON fpt.`ProjectKey` = wit.`ProjectKey`
+
+-- De-duped project dimension
+LEFT JOIN (
+  SELECT
+    ProjectKey,
+    MIN(`Project Created On Date`) AS `Project Created On Date`,
+    MIN(`Project Start Date`) AS `Project Start Date`,
+    MIN(`Project Due Date`) AS `Project Due Date`,
+    MIN(`Project Name`)        AS `Project Name`,
+    MIN(`Project Type`)        AS `Project Type`,
+    MIN(`Project Size`)        AS `Project Size`,
+    MIN(`Project State`)       AS `Project State`,
+    MIN(`Parent Project Name`) AS `Parent Project Name`,
+    MIN(`Project Track Status`) AS `Project Track Status`
+  FROM `dim_project`
+  GROUP BY ProjectKey
+) p
+  ON fpt.`ProjectKey` = p.`ProjectKey`
+
+-- Bridge: pick one CustomerKey per ProjectKey from the fact (prevents many-to-many)
+LEFT JOIN (
+  SELECT
+    ProjectKey,
+    MIN(CustomerKey) AS CustomerKey
+  FROM `fact_timesheet`
+  GROUP BY ProjectKey
+) pc
+  ON fpt.`ProjectKey` = pc.`ProjectKey`
+
+-- De-duped customer dimension
+LEFT JOIN (
+  SELECT
+    CustomerKey,
+    MIN(`Customer Name`)            AS `Customer Name`,
+    MIN(`Customer State`)           AS `Customer State`,
+    MIN(`Customer Owner Name`)      AS `Customer Owner Name`,
+    MIN(`Customer Account Status`)  AS `Customer Account Status`,
+    MIN(`Customer Tier`)            AS `Customer Tier`,
+    MIN(`Customer Region`)          AS `Customer Region`,
+    MIN(`StarRez Go Live Date`)     AS `StarRez Go Live Date`,
+    MIN(`Customer Link Entity ID`)  AS `Customer Link Entity ID`
+  FROM `dim_customer`
+  GROUP BY CustomerKey
+) c
+  ON pc.CustomerKey = c.CustomerKey
+
+
+
